@@ -46,12 +46,16 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <button onclick="exportJSON()" title="Exporter" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold flex items-center space-x-1.5 border border-white/10">
+                <div id="syncBadge" title="État" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/10 text-xs font-semibold">
+                    <i id="syncIcon" class="fa-solid fa-circle text-[7px] text-slate-300"></i>
+                    <span id="syncText">Local</span>
+                </div>
+                <button onclick="exportJSON()" title="Exporter" class="px-3 py-1.5 bg-white/10 hover:bg-white/25 rounded-lg text-xs font-semibold flex items-center space-x-1.5 border border-white/10">
                     <i class="fa-solid fa-download text-amber-300"></i>
                     <span class="hidden sm:inline">Exporter</span>
                 </button>
-                <button onclick="resetData()" title="Réinitialiser" class="p-2 bg-rose-500/30 hover:bg-rose-500/50 text-rose-100 rounded-lg text-xs border border-rose-300/30">
-                    <i class="fa-solid fa-rotate-left"></i>
+                <button id="accountBtn" onclick="handleAccount()" title="Compte Cloud" class="p-2 bg-white/10 hover:bg-white/25 rounded-lg text-xs border border-white/10">
+                    <i id="accountIcon" class="fa-solid fa-user text-slate-200"></i>
                 </button>
             </div>
         </div>
@@ -159,7 +163,21 @@
         </div>
     </main>
 
-    <!-- Toast Notification -->
+    <!-- Modal d'authentification Cloud -->
+    <div id="authOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4">
+            <h2 class="text-lg font-extrabold text-slate-900">Connexion Cloud Partagée</h2>
+            <p class="text-xs text-slate-500">Connectez-vous pour synchroniser vos primes sur tous vos appareils.</p>
+            <form onsubmit="submitAuth(event)" class="space-y-3">
+                <input type="email" id="authEmail" required placeholder="Votre e-mail" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-3">
+                <input type="password" id="authPassword" required placeholder="Mot de passe" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-3">
+                <button type="submit" class="w-full bg-brand-600 text-white font-bold py-3 rounded-xl shadow-md">Se connecter / S'inscrire</button>
+            </form>
+            <button onclick="document.getElementById('authOverlay').classList.add('hidden')" class="w-full text-xs text-slate-400 underline">Fermer</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
     <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3">
         <i class="fa-solid fa-circle-check text-emerald-400"></i>
         <span id="toastMsg" class="text-sm font-medium">Action réussie</span>
@@ -167,6 +185,11 @@
 
     <!-- Script Application -->
     <script>
+        const CLOUD_CONFIG = {
+            SUPABASE_URL: "https://ciydosokvkulbqdbebqq.supabase.co",
+            SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // Pensez à remplacer par votre vraie clé Anon publique Supabase complète si nécessaire
+        };
+
         const LOCAL_KEY = 'app_primes_v2026';
         const initialPrimesExcel = [
             { id: 1, date: '2026-09-02', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
@@ -195,41 +218,94 @@
         ];
 
         let primes = [];
+        let sb = null;
+        let currentUser = null;
 
-        function calculateBrut(dateStr, niveau) {
-            if (!dateStr) return 0;
-            const d = new Date(dateStr);
-            const pivot = new Date('2026-10-01');
-            if (d >= pivot) {
-                return niveau === 'Niveau 1' ? 41 : 83;
-            } else {
-                return niveau === 'Niveau 1' ? 39 : 78;
-            }
+        function isConfigured() {
+            return CLOUD_CONFIG.SUPABASE_URL.indexOf('http') === 0 && CLOUD_CONFIG.SUPABASE_ANON_KEY.length > 20;
         }
 
-        function updateTarifNotice() {
-            const date = document.getElementById('dateInput').value;
-            const niveau = document.getElementById('niveauInput').value;
-            const brut = calculateBrut(date, niveau);
-            document.getElementById('tarifNoticeValue').textContent = `${brut},00 € brut`;
-        }
-
-        function readLocal() {
-            try {
-                const saved = localStorage.getItem(LOCAL_KEY);
-                return saved ? JSON.parse(saved) : null;
-            } catch (e) { return null; }
-        }
-
-        function writeLocal() {
-            try { localStorage.setItem(LOCAL_KEY, JSON.stringify(primes)); } catch (e) {}
-        }
-
-        function init() {
-            primes = readLocal() || initialPrimesExcel.map(p => ({...p}));
+        async function init() {
+            primes = JSON.parse(localStorage.getItem(LOCAL_KEY)) || initialPrimesExcel.map(p => ({...p}));
             document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
             updateTarifNotice();
             renderApp();
+
+            if (!isConfigured()) return;
+
+            try {
+                sb = window.supabase.createClient(CLOUD_CONFIG.SUPABASE_URL, CLOUD_CONFIG.SUPABASE_ANON_KEY);
+                const session = (await sb.auth.getSession()).data.session;
+                if (session) {
+                    currentUser = session.user;
+                    setSync('ok', 'Connecté');
+                    await cloudPull();
+                    subscribeRealtime();
+                } else {
+                    setSync('offline', 'Non connecté');
+                }
+            } catch (e) { setSync('error', 'Erreur cloud'); }
+        }
+
+        async function cloudPull() {
+            if (!sb || !currentUser) return;
+            const { data } = await sb.from('primes').select('*').eq('user_id', currentUser.id);
+            if (data && data.length > 0) {
+                primes = data.map(r => ({ ...r, id: Number(r.id), brut: Number(r.brut) }));
+                localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
+                renderApp();
+            }
+        }
+
+        async function pushCloud() {
+            if (!sb || !currentUser) return;
+            await sb.from('primes').delete().eq('user_id', currentUser.id);
+            const rows = primes.map(p => ({ ...p, user_id: currentUser.id }));
+            if (rows.length > 0) await sb.from('primes').insert(rows);
+            setSync('ok', 'Synchronisé');
+        }
+
+        function subscribeRealtime() {
+            if (!sb || !currentUser) return;
+            sb.channel('public:primes')
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'primes', filter: `user_id=eq.${currentUser.id}` }, () => cloudPull())
+              .subscribe();
+        }
+
+        function setSync(state, label) {
+            const colors = { local: 'text-slate-300', offline: 'text-amber-300', ok: 'text-emerald-300', error: 'text-rose-400' };
+            document.getElementById('syncIcon').className = 'fa-solid fa-circle text-[7px] ' + (colors[state] || colors.local);
+            document.getElementById('syncText').textContent = label;
+        }
+
+        function handleAccount() {
+            if (!isConfigured()) { alert("Veuillez renseigner vos clés Supabase dans le code source."); return; }
+            if (currentUser) {
+                if (confirm(`Déconnecter ${currentUser.email} ?`)) { sb.auth.signOut(); currentUser = null; location.reload(); }
+            } else {
+                document.getElementById('authOverlay').classList.remove('hidden');
+            }
+        }
+
+        async function submitAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            let res = await sb.auth.signInWithPassword({ email, password });
+            if (res.error) res = await sb.auth.signUp({ email, password });
+            if (res.error) { alert(res.error.message); return; }
+            alert('Connexion réussie !');
+            location.reload();
+        }
+
+        function calculateBrut(dateStr, niveau) {
+            if (!dateStr) return 0;
+            return new Date(dateStr) >= new Date('2026-10-01') ? (niveau === 'Niveau 1' ? 41 : 83) : (niveau === 'Niveau 1' ? 39 : 78);
+        }
+
+        function updateTarifNotice() {
+            const brut = calculateBrut(document.getElementById('dateInput').value, document.getElementById('niveauInput').value);
+            document.getElementById('tarifNoticeValue').textContent = `${brut},00 € brut`;
         }
 
         function addPrime(e) {
@@ -241,15 +317,12 @@
             const projet = document.getElementById('projetInput').value.trim();
             const comment = document.getElementById('commentInput').value.trim();
             const brut = calculateBrut(date, niveau);
-            const newId = primes.length > 0 ? Math.max(...primes.map(p => p.id)) + 1 : 1;
+            const id = primes.length > 0 ? Math.max(...primes.map(p => p.id)) + 1 : 1;
 
-            primes.push({ id: newId, date, niveau, statut, systeme, projet, comment, brut });
-            writeLocal();
+            primes.push({ id, date, niveau, statut, systeme, projet, comment, brut });
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
+            pushCloud();
             renderApp();
-
-            document.getElementById('systemeInput').value = '';
-            document.getElementById('projetInput').value = '';
-            document.getElementById('commentInput').value = '';
             showToast('Prime enregistrée !');
         }
 
@@ -258,42 +331,29 @@
             if (!p) return;
             const cycle = ['À venir', 'Payé', 'Oublié'];
             p.statut = cycle[(cycle.indexOf(p.statut) + 1) % cycle.length];
-            writeLocal();
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
+            pushCloud();
             renderApp();
-            showToast(`Statut : ${p.statut}`);
         }
 
         function deletePrime(id) {
-            if (!confirm("Supprimer cette prime ?")) return;
+            if (!confirm("Supprimer ?")) return;
             primes = primes.filter(item => item.id !== id);
-            writeLocal();
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
+            pushCloud();
             renderApp();
-            showToast('Prime supprimée');
-        }
-
-        function resetData() {
-            if (!confirm("Réinitialiser avec les 23 primes d'origine ?")) return;
-            primes = initialPrimesExcel.map(p => ({...p}));
-            writeLocal();
-            renderApp();
-            showToast('Réinitialisé');
         }
 
         function exportJSON() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(primes, null, 2));
             const a = document.createElement('a');
-            a.href = dataStr;
-            a.download = `primes_2026.json`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            showToast('Export réussi !');
+            a.href = dataStr; a.download = `primes_2026.json`;
+            document.body.appendChild(a); a.click(); a.remove();
         }
 
         function renderApp() {
             const filterVal = document.getElementById('monthFilter').value;
             const filtered = primes.filter(p => filterVal === 'ALL' || (p.date && p.date.startsWith(filterVal)));
-
             let totalBrut = 0, payeBrut = 0, venirBrut = 0, oublieBrut = 0;
             filtered.forEach(p => {
                 const b = Number(p.brut) || 0;
@@ -302,28 +362,27 @@
                 else if (p.statut === 'Oublié') oublieBrut += b;
                 else venirBrut += b;
             });
-
             const net = val => Math.round(val * 0.78);
 
             document.getElementById('kpiCards').innerHTML = `
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
                     <div class="text-slate-500 text-xs font-bold uppercase">Total Sélection</div>
-                    <div class="text-2xl font-extrabold text-slate-900">${totalBrut} € <span class="text-xs text-slate-400">brut</span></div>
-                    <div class="text-xs font-semibold text-emerald-600">≈ ${net(totalBrut)} € net</div>
+                    <div class="text-2xl font-extrabold text-slate-900">${totalBrut} €</div>
+                    <div class="text-xs text-emerald-600 font-semibold">≈ ${net(totalBrut)} € net</div>
                 </div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
                     <div class="text-slate-500 text-xs font-bold uppercase">Payé</div>
-                    <div class="text-2xl font-extrabold text-emerald-600">${payeBrut} € <span class="text-xs text-slate-400">brut</span></div>
+                    <div class="text-2xl font-extrabold text-emerald-600">${payeBrut} €</div>
                     <div class="text-xs text-slate-500">≈ ${net(payeBrut)} € net</div>
                 </div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
                     <div class="text-slate-500 text-xs font-bold uppercase">À venir</div>
-                    <div class="text-2xl font-extrabold text-amber-600">${venirBrut} € <span class="text-xs text-slate-400">brut</span></div>
+                    <div class="text-2xl font-extrabold text-amber-600">${venirBrut} €</div>
                     <div class="text-xs text-slate-500">≈ ${net(venirBrut)} € net</div>
                 </div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
-                    <div class="text-slate-500 text-xs font-bold uppercase">Oublié / À relancer</div>
-                    <div class="text-2xl font-extrabold text-rose-600">${oublieBrut} € <span class="text-xs text-slate-400">brut</span></div>
+                    <div class="text-slate-500 text-xs font-bold uppercase">Oublié</div>
+                    <div class="text-2xl font-extrabold text-rose-600">${oublieBrut} €</div>
                     <div class="text-xs text-slate-500">≈ ${net(oublieBrut)} € net</div>
                 </div>
             `;
@@ -332,39 +391,22 @@
             document.getElementById('rowCountBadge').textContent = filtered.length;
             filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            let html = '';
-            filtered.forEach(p => {
+            tbody.innerHTML = filtered.map(p => {
                 const b = Number(p.brut) || 0;
-                const [yyyy, mm, dd] = p.date ? p.date.split('-') : ['--', '--', '--'];
-                const dateF = p.date ? `${dd}/${mm}/${yyyy}` : '--';
-                
-                let badge = 'bg-amber-100 text-amber-800 border-amber-300';
-                if (p.statut === 'Payé') badge = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-                if (p.statut === 'Oublié') badge = 'bg-rose-100 text-rose-800 border-rose-300';
-
-                html += `
+                const [y, m, d] = p.date ? p.date.split('-') : ['--', '--', '--'];
+                let badge = p.statut === 'Payé' ? 'bg-emerald-100 text-emerald-800' : (p.statut === 'Oublié' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+                return `
                     <tr class="hover:bg-slate-50 transition">
-                        <td class="px-4 py-3.5 font-semibold text-slate-800">${dateF}</td>
-                        <td class="px-4 py-3.5">
-                            <div class="font-bold text-slate-900">${p.systeme || '—'}</div>
-                            <div class="text-xs text-slate-500">${p.projet || ''}</div>
-                        </td>
-                        <td class="px-4 py-3.5"><span class="px-2 py-1 rounded-lg text-xs font-bold bg-brand-50 text-brand-700">${p.niveau}</span></td>
-                        <td class="px-4 py-3.5">
-                            <div class="font-extrabold text-slate-900">${b} €</div>
-                            <div class="text-xs text-slate-500">~${net(b)} € net</div>
-                        </td>
-                        <td class="px-4 py-3.5 text-center">
-                            <button onclick="cycleStatut(${p.id})" class="px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${badge}">${p.statut}</button>
-                        </td>
-                        <td class="px-4 py-3.5 text-xs text-slate-500">${p.comment || '—'}</td>
-                        <td class="px-3 py-3.5 text-right">
-                            <button onclick="deletePrime(${p.id})" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash-can"></i></button>
-                        </td>
+                        <td class="px-4 py-3 font-semibold">${d}/${m}/${y}</td>
+                        <td class="px-4 py-3"><div class="font-bold">${p.systeme || '—'}</div><div class="text-xs text-slate-500">${p.projet || ''}</div></td>
+                        <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-bold bg-brand-50 text-brand-700">${p.niveau}</span></td>
+                        <td class="px-4 py-3"><div class="font-extrabold">${b} €</div><div class="text-xs text-slate-500">~${net(b)} €</div></td>
+                        <td class="px-4 py-3 text-center"><button onclick="cycleStatut(${p.id})" class="px-3 py-1 rounded-full text-xs font-bold border ${badge}">${p.statut}</button></td>
+                        <td class="px-4 py-3 text-xs text-slate-500">${p.comment || '—'}</td>
+                        <td class="px-3 py-3 text-right"><button onclick="deletePrime(${p.id})" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash-can"></i></button></td>
                     </tr>
                 `;
-            });
-            tbody.innerHTML = html;
+            }).join('');
         }
 
         function showToast(msg) {
