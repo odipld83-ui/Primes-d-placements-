@@ -111,8 +111,6 @@
                 <label for="monthFilter" class="text-sm font-semibold text-slate-700 whitespace-nowrap">Filtrer par période :</label>
                 <select id="monthFilter" onchange="renderApp()" class="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
                     <option value="ALL">Toute l'année</option>
-                    <option value="2026-09">Septembre 2026</option>
-                    <option value="2026-10">Octobre 2026</option>
                 </select>
             </div>
 
@@ -650,7 +648,24 @@
         }
 
         /* ---------------- Rendu ---------------- */
+        function buildMonthFilter() {
+            const sel = document.getElementById('monthFilter');
+            const current = sel.value || 'ALL';
+            const names = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+            const months = new Set();
+            primes.forEach(p => { if (p.date && p.date.length >= 7) months.add(p.date.slice(0, 7)); });
+            const list = Array.from(months).sort();
+            let html = '<option value="ALL">Toute l\'année</option>';
+            list.forEach(m => {
+                const parts = m.split('-');
+                html += '<option value="' + m + '">' + names[parseInt(parts[1], 10) - 1] + ' ' + parts[0] + '</option>';
+            });
+            sel.innerHTML = html;
+            sel.value = (current === 'ALL' || list.indexOf(current) !== -1) ? current : 'ALL';
+        }
+
         function renderApp() {
+            buildMonthFilter();
             const filter = document.getElementById('monthFilter').value;
             let list = primes;
             if (filter !== 'ALL') {
