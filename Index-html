@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Suivi Primes de Déplacement 2026</title>
     <meta name="theme-color" content="#1e3a8a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Primes 2026">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Suivi Primes 2026","short_name":"Primes 2026","start_url":"./","display":"standalone","background_color":"%23f8fafc","theme_color":"%231e3a8a"}'>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -17,298 +13,162 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Supabase JS (client cloud) -->
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
                         brand: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
+                            50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6',
+                            600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a',
                         }
                     }
                 }
             }
         }
     </script>
-    <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    </style>
 </head>
 <body class="h-full font-sans text-slate-800 antialiased flex flex-col min-h-screen">
 
     <!-- Header Navigation -->
     <header class="bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 text-white shadow-lg sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between gap-2">
-            <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
-                <div class="bg-white/10 p-2 sm:p-2.5 rounded-xl backdrop-blur-md border border-white/20 shrink-0">
-                    <i class="fa-solid fa-truck-fast text-lg sm:text-2xl text-amber-400"></i>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl border border-white/20">
+                    <i class="fa-solid fa-truck-fast text-xl text-amber-400"></i>
                 </div>
-                <div class="min-w-0">
-                    <h1 class="text-base sm:text-xl font-extrabold tracking-tight truncate">Suivi Primes Déplacement</h1>
+                <div>
+                    <h1 class="text-base sm:text-xl font-extrabold tracking-tight">Suivi Primes Déplacement</h1>
                     <p class="text-xs text-brand-100 hidden sm:block">Revalorisation au 01/10/2026 : N1 = 41€ / N2 = 83€</p>
                 </div>
             </div>
-
-            <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
-                <!-- Indicateur de synchronisation -->
-                <div id="syncBadge" title="État de la synchronisation" class="flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs font-semibold">
-                    <i id="syncIcon" class="fa-solid fa-circle text-[7px] text-slate-300"></i>
-                    <span id="syncText" class="hidden sm:inline">Local</span>
-                </div>
-                <button id="pullBtn" onclick="cloudPull(false)" title="Récupérer les données du cloud" class="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs transition border border-white/10 hidden">
-                    <i class="fa-solid fa-rotate text-blue-200"></i>
-                </button>
-                <button onclick="exportJSON()" title="Exporter mes données en sauvegarde" class="px-2 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition backdrop-blur-sm flex items-center space-x-1.5 border border-white/10">
+            <div class="flex items-center space-x-2">
+                <button onclick="exportJSON()" title="Exporter" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold flex items-center space-x-1.5 border border-white/10">
                     <i class="fa-solid fa-download text-amber-300"></i>
                     <span class="hidden sm:inline">Exporter</span>
                 </button>
-                <label title="Importer un fichier de sauvegarde" class="px-2 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition backdrop-blur-sm flex items-center space-x-1.5 border border-white/10 cursor-pointer">
-                    <i class="fa-solid fa-upload text-blue-200"></i>
-                    <span class="hidden sm:inline">Importer</span>
-                    <input type="file" id="importInput" accept=".json" class="hidden" onchange="importJSON(event)">
-                </label>
-                <button onclick="resetData()" title="Réinitialiser avec les 23 primes d'origine du fichier Excel" class="p-2 bg-rose-500/30 hover:bg-rose-500/50 text-rose-100 rounded-lg text-xs transition border border-rose-300/30">
+                <button onclick="resetData()" title="Réinitialiser" class="p-2 bg-rose-500/30 hover:bg-rose-500/50 text-rose-100 rounded-lg text-xs border border-rose-300/30">
                     <i class="fa-solid fa-rotate-left"></i>
-                </button>
-                <button id="accountBtn" onclick="handleAccount()" title="Compte" class="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs transition border border-white/10">
-                    <i id="accountIcon" class="fa-solid fa-user text-slate-200"></i>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Main Container -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 sm:space-y-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
 
-        <!-- Bandeau configuration -->
-        <div id="configBanner" class="hidden bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-4 text-sm space-y-2">
-            <div class="flex items-start space-x-3">
-                <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
-                <div class="space-y-1">
-                    <p class="font-bold">Mode local : les données restent sur cet appareil uniquement.</p>
-                    <p class="text-xs leading-relaxed">Pour retrouver vos primes sur tous vos appareils (PC, téléphone, tablette), renseignez vos clés Supabase dans le bloc <code class="bg-amber-100 px-1 rounded font-mono text-[11px]">CLOUD_CONFIG</code> en haut du script de ce fichier, puis hébergez la page (voir la procédure fournie). L'application fonctionne en attendant, sans rien perdre.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bar de filtre & Taux Net -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+        <!-- Barre de filtre -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
             <div class="flex items-center space-x-3">
-                <div class="p-2 bg-brand-50 text-brand-600 rounded-lg">
-                    <i class="fa-solid fa-filter"></i>
-                </div>
-                <label for="monthFilter" class="text-sm font-semibold text-slate-700 whitespace-nowrap">Filtrer par période :</label>
-                <select id="monthFilter" onchange="renderApp()" class="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
+                <div class="p-2 bg-brand-50 text-brand-600 rounded-lg"><i class="fa-solid fa-filter"></i></div>
+                <label for="monthFilter" class="text-sm font-semibold text-slate-700">Filtrer par période :</label>
+                <select id="monthFilter" onchange="renderApp()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl p-2.5 font-semibold">
                     <option value="ALL">Toute l'année (23 primes)</option>
                     <option value="2026-09">Septembre 2026</option>
                     <option value="2026-10">Octobre 2026</option>
                 </select>
             </div>
-
-            <div class="flex flex-wrap items-center gap-3 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-slate-600">
-                <div class="flex items-center space-x-1.5">
-                    <i class="fa-solid fa-calculator text-brand-600"></i>
-                    <span>Taux Net estimé : <strong class="text-slate-800">~78 %</strong></span>
-                </div>
-                <span class="text-slate-300">|</span>
-                <div class="flex items-center space-x-1">
-                    <i class="fa-solid fa-arrow-trend-up text-emerald-600"></i>
-                    <span>Tarifs : <strong class="text-slate-800">N1: 41€ / N2: 83€</strong> (depuis 01/10)</span>
-                </div>
+            <div class="text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-slate-600 flex items-center space-x-2">
+                <i class="fa-solid fa-calculator text-brand-600"></i>
+                <span>Taux Net estimé : <strong class="text-slate-800">~78 %</strong></span>
             </div>
         </div>
 
         <!-- Dashboard KPI -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpiCards">
-            <!-- Dynamic KPI Render -->
-        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpiCards"></div>
 
-        <!-- Layout 2 colonnes: Formulaire + Tableau -->
+        <!-- Layout Formulaire + Tableau -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            <!-- Formulaire de saisie (4 Colonnes) -->
+            <!-- Formulaire -->
             <div class="lg:col-span-4">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 lg:sticky lg:top-20">
-                    <div class="flex items-center space-x-2.5 pb-3 mb-4 border-b border-slate-100">
-                        <div class="p-2 bg-brand-50 text-brand-600 rounded-lg">
-                            <i class="fa-solid fa-calendar-plus text-base"></i>
-                        </div>
-                        <h2 class="text-base font-bold text-slate-800">Saisir un retour de prime</h2>
-                    </div>
-
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-4 pb-2 border-b">Saisir un retour de prime</h2>
                     <form id="primeForm" onsubmit="addPrime(event)" class="space-y-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Date de retour *</label>
-                            <input type="date" id="dateInput" required onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Date *</label>
+                            <input type="date" id="dateInput" required onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2.5 font-semibold">
                         </div>
-
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Niveau de prime *</label>
-                            <select id="niveauInput" onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Niveau *</label>
+                            <select id="niveauInput" onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2.5 font-semibold">
                                 <option value="Niveau 2" selected>Niveau 2</option>
                                 <option value="Niveau 1">Niveau 1</option>
                             </select>
-                            <div id="tarifNotice" class="mt-1.5 text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-100 p-2 rounded-lg flex items-center justify-between">
+                            <div id="tarifNotice" class="mt-1.5 text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-100 p-2 rounded-lg flex justify-between">
                                 <span>Montant calculé :</span>
-                                <span class="font-bold text-sm text-brand-800" id="tarifNoticeValue">78,00 € brut</span>
+                                <span class="font-bold text-sm" id="tarifNoticeValue">78,00 € brut</span>
                             </div>
                         </div>
-
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Statut initial</label>
-                            <select id="statutInput" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Statut</label>
+                            <select id="statutInput" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2.5 font-semibold">
                                 <option value="À venir">🟠 En cours / À venir</option>
                                 <option value="Payé">🟢 Payé</option>
                                 <option value="Oublié">🔴 Oublié / À relancer</option>
                             </select>
                         </div>
-
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Système</label>
-                                <input type="text" id="systemeInput" placeholder="ex: A18D" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2 font-medium">
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Système</label>
+                                <input type="text" id="systemeInput" placeholder="ex: A18D" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2 font-medium">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Projet / Motif</label>
-                                <input type="text" id="projetInput" placeholder="ex: MFM" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2 font-medium">
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Projet</label>
+                                <input type="text" id="projetInput" placeholder="ex: MFM" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2 font-medium">
                             </div>
                         </div>
-
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Justificatif / Remarque</label>
-                            <textarea id="commentInput" rows="2" placeholder="Note, justificatif, n° de dossier..." class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5"></textarea>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Remarque</label>
+                            <textarea id="commentInput" rows="2" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2"></textarea>
                         </div>
-
-                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-plus text-sm"></i>
-                            <span>Enregistrer la prime</span>
+                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-plus"></i><span>Enregistrer</span>
                         </button>
                     </form>
                 </div>
             </div>
 
-            <!-- Tableau de suivi (8 Colonnes) -->
+            <!-- Tableau -->
             <div class="lg:col-span-8">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-                    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <div class="flex items-center space-x-2">
-                            <i class="fa-solid fa-list-check text-brand-600 text-base"></i>
-                            <h2 class="text-base font-bold text-slate-800">Historique des primes</h2>
-                        </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
+                        <h2 class="text-base font-bold text-slate-800">Historique des primes</h2>
                         <span id="rowCountBadge" class="bg-slate-200 text-slate-700 text-xs font-extrabold px-2.5 py-1 rounded-full">0</span>
                     </div>
-
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm text-slate-600">
-                            <thead class="bg-slate-100/70 text-xs uppercase font-bold text-slate-500 border-b border-slate-200">
+                            <thead class="bg-slate-100 text-xs uppercase font-bold text-slate-500 border-b">
                                 <tr>
-                                    <th scope="col" class="px-4 py-3">Date</th>
-                                    <th scope="col" class="px-4 py-3">Système / Projet</th>
-                                    <th scope="col" class="px-4 py-3">Niveau</th>
-                                    <th scope="col" class="px-4 py-3">Brut / Net</th>
-                                    <th scope="col" class="px-4 py-3 text-center">Statut (Cliquer)</th>
-                                    <th scope="col" class="px-4 py-3">Justificatif</th>
-                                    <th scope="col" class="px-3 py-3 text-right">Action</th>
+                                    <th class="px-4 py-3">Date</th>
+                                    <th class="px-4 py-3">Système / Projet</th>
+                                    <th class="px-4 py-3">Niveau</th>
+                                    <th class="px-4 py-3">Brut / Net</th>
+                                    <th class="px-4 py-3 text-center">Statut</th>
+                                    <th class="px-4 py-3">Remarque</th>
+                                    <th class="px-3 py-3 text-right">Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="primeTableBody" class="divide-y divide-slate-100">
-                                <!-- Data rendered via JS -->
-                            </tbody>
+                            <tbody id="primeTableBody" class="divide-y divide-slate-100"></tbody>
                         </table>
                     </div>
-
-                    <!-- Empty state -->
-                    <div id="emptyState" class="hidden p-8 text-center text-slate-400 space-y-2">
-                        <i class="fa-regular fa-folder-open text-3xl"></i>
-                        <p class="text-sm font-medium">Aucune prime pour cette sélection.</p>
-                    </div>
                 </div>
             </div>
-
         </div>
-
     </main>
 
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 pointer-events-none">
-        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
         <span id="toastMsg" class="text-sm font-medium">Action réussie</span>
-    </div>
-
-    <!-- Overlay de connexion cloud -->
-    <div id="authOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-5 sm:p-6 space-y-5">
-            <div class="flex items-center space-x-3">
-                <div class="bg-brand-50 p-2.5 rounded-xl">
-                    <i class="fa-solid fa-cloud-arrow-up text-brand-600 text-xl"></i>
-                </div>
-                <div>
-                    <h2 class="text-lg font-extrabold text-slate-900">Vos primes, sur tous vos appareils</h2>
-                    <p class="text-xs text-slate-500">Connectez-vous une fois sur chaque appareil.</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl text-sm font-bold">
-                <button type="button" id="tabLogin" onclick="setAuthTab('login')" class="py-2 rounded-lg bg-white shadow-sm text-brand-700">Se connecter</button>
-                <button type="button" id="tabSignup" onclick="setAuthTab('signup')" class="py-2 rounded-lg text-slate-500">Créer un compte</button>
-            </div>
-
-            <form id="authForm" onsubmit="submitAuth(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">E-mail</label>
-                    <input type="email" id="authEmail" required autocomplete="email" placeholder="votre@email.fr" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-3 font-medium">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Mot de passe</label>
-                    <input type="password" id="authPassword" required minlength="6" autocomplete="current-password" placeholder="6 caractères minimum" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-3 font-medium">
-                </div>
-                <p id="authMsg" class="hidden text-xs font-semibold rounded-lg p-2.5 border"></p>
-                <button type="submit" id="authSubmit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-md transition">
-                    Se connecter
-                </button>
-            </form>
-
-            <div class="text-center space-y-2 border-t border-slate-100 pt-3">
-                <button type="button" onclick="useLocalMode()" class="text-xs font-semibold text-slate-500 hover:text-slate-700 underline">
-                    Continuer sans compte (cet appareil uniquement)
-                </button>
-                <p class="text-[11px] text-slate-400 leading-relaxed">Les données sont stockées dans votre propre base Supabase et protégées par votre compte : elles ne sont pas publiques.</p>
-            </div>
-        </div>
     </div>
 
     <!-- Script Application -->
     <script>
-        /* ############################################################
-           ###                                                      ###
-           ###   ETAPE 2 - COLLEZ VOS 2 VALEURS ENTRE LES GUILLEMETS ###
-           ###   (Supabase > Project Settings > API)                ###
-           ###                                                      ###
-           ############################################################ */
-        const CLOUD_CONFIG = {
-            SUPABASE_URL: "COLLEZ_ICI_LA_PROJECT_URL",
-            SUPABASE_ANON_KEY: "COLLEZ_ICI_LA_CLE_ANON"
-        };
-
         const LOCAL_KEY = 'app_primes_v2026';
-
-        // Les 23 primes initiales selon la répartition exacte du fichier Excel
         const initialPrimesExcel = [
-            // Primes Payées (8x Niv 2 à 78€ + 1x Niv 1 à 39€)
             { id: 1, date: '2026-09-02', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
             { id: 2, date: '2026-09-11', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
             { id: 3, date: '2026-09-14', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
@@ -318,12 +178,8 @@
             { id: 7, date: '2026-09-29', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
             { id: 8, date: '2026-09-30', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
             { id: 9, date: '2026-09-30', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 1', brut: 39, statut: 'Payé', comment: '' },
-
-            // Prime Oubliée (1x Niv 2 à 78€)
-            { id: 10, date: '2026-09-03', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Oublié', comment: 'Relancer le service paie' },
-
-            // Primes En cours / À venir (11x Niv 2 à 83€ + 2x Niv 1 à 41€)
-            { id: 11, date: '2026-10-01', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: 'Tarif revalorisé au 01/10' },
+            { id: 10, date: '2026-09-03', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Oublié', comment: 'Relancer paie' },
+            { id: 11, date: '2026-10-01', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: 'Revalorisé' },
             { id: 12, date: '2026-10-05', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 1', brut: 41, statut: 'À venir', comment: '' },
             { id: 13, date: '2026-10-06', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
             { id: 14, date: '2026-10-19', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
@@ -339,25 +195,7 @@
         ];
 
         let primes = [];
-        let sb = null;                 // client Supabase
-        let currentUser = null;        // utilisateur connecté
-        let cloudReady = false;        // true = lecture/écriture cloud autorisée
-        let pushTimer = null;
-        let authTab = 'login';
 
-        /* ---------------- Utilitaires de configuration ---------------- */
-        function isConfigured() {
-            const u = CLOUD_CONFIG.SUPABASE_URL || '';
-            const k = CLOUD_CONFIG.SUPABASE_ANON_KEY || '';
-            if (u.indexOf('COLLEZ_ICI') !== -1 || k.indexOf('COLLEZ_ICI') !== -1) return false;
-            return u.indexOf('http') === 0 && k.length > 40;
-        }
-
-        function cloneSeed() {
-            return initialPrimesExcel.map(p => Object.assign({}, p));
-        }
-
-        /* ---------------- Règle de tarif (01/10/2026) ---------------- */
         function calculateBrut(dateStr, niveau) {
             if (!dateStr) return 0;
             const d = new Date(dateStr);
@@ -376,13 +214,10 @@
             document.getElementById('tarifNoticeValue').textContent = `${brut},00 € brut`;
         }
 
-        /* ---------------- Cache local (mode hors-ligne) ---------------- */
         function readLocal() {
             try {
                 const saved = localStorage.getItem(LOCAL_KEY);
-                if (!saved) return null;
-                const parsed = JSON.parse(saved);
-                return Array.isArray(parsed) ? parsed : null;
+                return saved ? JSON.parse(saved) : null;
             } catch (e) { return null; }
         }
 
@@ -390,454 +225,11 @@
             try { localStorage.setItem(LOCAL_KEY, JSON.stringify(primes)); } catch (e) {}
         }
 
-        /* ---------------- Indicateur de synchronisation ---------------- */
-        function setSync(state, detail) {
-            const icon = document.getElementById('syncIcon');
-            const text = document.getElementById('syncText');
-            const map = {
-                local:   { color: 'text-slate-300',  label: 'Local' },
-                offline: { color: 'text-amber-300',  label: 'Non connecté' },
-                syncing: { color: 'text-blue-300 animate-pulse', label: 'Synchro…' },
-                ok:      { color: 'text-emerald-300', label: 'Synchronisé' },
-                error:   { color: 'text-rose-400',   label: 'Erreur' }
-            };
-            const cfg = map[state] || map.local;
-            icon.className = 'fa-solid fa-circle text-[7px] ' + cfg.color;
-            text.textContent = cfg.label;
-            const badge = document.getElementById('syncBadge');
-            badge.title = detail ? (cfg.label + ' — ' + detail) : cfg.label;
-        }
-
-        function renderAccount() {
-            const btn = document.getElementById('accountBtn');
-            const icon = document.getElementById('accountIcon');
-            if (currentUser) {
-                icon.className = 'fa-solid fa-right-from-bracket text-emerald-300';
-                btn.title = currentUser.email + ' — cliquer pour se déconnecter';
-                btn.classList.remove('hidden');
-                document.getElementById('pullBtn').classList.remove('hidden');
-            } else {
-                icon.className = 'fa-solid fa-user text-slate-200';
-                btn.title = 'Se connecter au cloud';
-                document.getElementById('pullBtn').classList.add('hidden');
-            }
-        }
-
-        /* ---------------- Démarrage ---------------- */
-        async function init() {
-            primes = readLocal() || cloneSeed();
-
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('dateInput').value = today;
+        function init() {
+            primes = readLocal() || initialPrimesExcel.map(p => ({...p}));
+            document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
             updateTarifNotice();
             renderApp();
-            renderAccount();
-
-            if (!isConfigured()) {
-                setSync('local');
-                document.getElementById('configBanner').classList.remove('hidden');
-                return;
-            }
-            document.getElementById('configBanner').classList.add('hidden');
-
-            try {
-                sb = window.supabase.createClient(CLOUD_CONFIG.SUPABASE_URL, CLOUD_CONFIG.SUPABASE_ANON_KEY);
-            } catch (e) {
-                setSync('error', 'client Supabase indisponible');
-                return;
-            }
-
-            try {
-                const res = await sb.auth.getSession();
-                const session = res && res.data ? res.data.session : null;
-                if (session) {
-                    currentUser = session.user;
-                    await startCloud();
-                } else {
-                    setSync('offline');
-                    showAuth();
-                }
-            } catch (e) {
-                setSync('error', e.message || 'connexion impossible');
-            }
-
-            sb.auth.onAuthStateChange((event) => {
-                if (event === 'SIGNED_OUT') {
-                    currentUser = null;
-                    cloudReady = false;
-                    renderAccount();
-                    setSync('offline');
-                    showAuth();
-                }
-            });
-        }
-
-        async function startCloud() {
-            cloudReady = true;
-            document.getElementById('authOverlay').classList.add('hidden');
-            renderAccount();
-            await cloudPull(true);
-            subscribeRealtime();
-        }
-
-        /* ---------------- Lecture cloud ---------------- */
-        async function cloudPull(seedIfEmpty) {
-            if (!sb || !currentUser) {
-                if (isConfigured()) showAuth();
-                return;
-            }
-            setSync('syncing');
-            try {
-                const { data, error } = await sb
-                    .from('primes')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .order('date', { ascending: true });
-
-                if (error) {
-                    setSync('error', error.message);
-                    showToast('Erreur de lecture : ' + error.message, 'error');
-                    return;
-                }
-
-                if ((!data || data.length === 0) && seedIfEmpty) {
-                    if (primes.length === 0) primes = cloneSeed();
-                    await pushCloud();
-                    renderApp();
-                    return;
-                }
-
-                primes = (data || []).map(r => ({
-                    id: Number(r.id),
-                    date: r.date || '',
-                    niveau: r.niveau || 'Niveau 2',
-                    statut: r.statut || 'À venir',
-                    systeme: r.systeme || '',
-                    projet: r.projet || '',
-                    comment: r.comment || '',
-                    brut: Number(r.brut) || 0
-                }));
-                writeLocal();
-                renderApp();
-                setSync('ok');
-            } catch (e) {
-                setSync('error', e.message || 'réseau');
-            }
-        }
-
-        /* ---------------- Écriture cloud ---------------- */
-        function schedulePush() {
-            if (!cloudReady) return;
-            clearTimeout(pushTimer);
-            pushTimer = setTimeout(pushCloud, 400);
-        }
-
-        async function pushCloud() {
-            if (!sb || !currentUser || !cloudReady) return;
-            clearTimeout(pushTimer);
-            setSync('syncing');
-
-            const rows = primes.map(p => ({
-                user_id: currentUser.id,
-                id: Number(p.id),
-                date: p.date || null,
-                niveau: p.niveau || 'Niveau 2',
-                statut: p.statut || 'À venir',
-                systeme: p.systeme || '',
-                projet: p.projet || '',
-                comment: p.comment || '',
-                brut: Number(p.brut) || 0,
-                updated_at: new Date().toISOString()
-            }));
-
-            try {
-                if (rows.length > 0) {
-                    const { error } = await sb.from('primes').upsert(rows, { onConflict: 'user_id,id' });
-                    if (error) throw error;
-                }
-                // Suppression des lignes retirées côté appareil
-                let q = sb.from('primes').delete().eq('user_id', currentUser.id);
-                if (rows.length > 0) {
-                    q = q.not('id', 'in', '(' + rows.map(r => r.id).join(',') + ')');
-                }
-                const { error: delErr } = await q;
-                if (delErr) throw delErr;
-                setSync('ok');
-            } catch (e) {
-                setSync('error', (e && e.message) || 'écriture impossible');
-                showToast('Synchronisation impossible — données gardées sur cet appareil', 'error');
-            }
-        }
-
-        let realtimeChannel = null;
-        function subscribeRealtime() {
-            if (!sb || !currentUser) return;
-            try {
-                if (realtimeChannel) sb.removeChannel(realtimeChannel);
-                realtimeChannel = sb.channel('primes-' + currentUser.id)
-                    .on('postgres_changes',
-                        { event: '*', schema: 'public', table: 'primes', filter: 'user_id=eq.' + currentUser.id },
-                        () => { cloudPull(false); })
-                    .subscribe();
-            } catch (e) { /* temps réel optionnel */ }
-        }
-
-        /* ---------------- Authentification ---------------- */
-        function setAuthTab(tab) {
-            authTab = tab;
-            const on = 'py-2 rounded-lg bg-white shadow-sm text-brand-700';
-            const off = 'py-2 rounded-lg text-slate-500';
-            document.getElementById('tabLogin').className = tab === 'login' ? on : off;
-            document.getElementById('tabSignup').className = tab === 'signup' ? on : off;
-            document.getElementById('authSubmit').textContent = tab === 'login' ? 'Se connecter' : 'Créer mon compte';
-            hideAuthMsg();
-        }
-
-        function showAuthMsg(text, type) {
-            const el = document.getElementById('authMsg');
-            el.textContent = text;
-            el.className = 'text-xs font-semibold rounded-lg p-2.5 border ' +
-                (type === 'error'
-                    ? 'text-rose-700 bg-rose-50 border-rose-200'
-                    : 'text-emerald-700 bg-emerald-50 border-emerald-200');
-            el.classList.remove('hidden');
-        }
-
-        function hideAuthMsg() {
-            document.getElementById('authMsg').classList.add('hidden');
-        }
-
-        function showAuth() {
-            document.getElementById('authOverlay').classList.remove('hidden');
-        }
-
-        function useLocalMode() {
-            document.getElementById('authOverlay').classList.add('hidden');
-            setSync('local');
-            showToast('Mode local : données sur cet appareil');
-        }
-
-        async function submitAuth(e) {
-            e.preventDefault();
-            if (!sb) {
-                showAuthMsg("Configuration Supabase manquante : renseignez CLOUD_CONFIG dans le fichier.", 'error');
-                return;
-            }
-            const email = document.getElementById('authEmail').value.trim();
-            const password = document.getElementById('authPassword').value;
-            const btn = document.getElementById('authSubmit');
-            btn.disabled = true;
-            btn.textContent = 'Patientez…';
-            hideAuthMsg();
-
-            try {
-                if (authTab === 'signup') {
-                    const { data, error } = await sb.auth.signUp({ email, password });
-                    if (error) throw error;
-                    if (data && data.session) {
-                        currentUser = data.session.user;
-                        await startCloud();
-                        showToast('Compte créé — synchronisation active');
-                    } else {
-                        showAuthMsg("Compte créé. Ouvrez l'e-mail reçu pour confirmer, puis connectez-vous.", 'ok');
-                    }
-                } else {
-                    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-                    if (error) throw error;
-                    currentUser = data.user;
-                    await startCloud();
-                    showToast('Connecté — données synchronisées');
-                }
-            } catch (err) {
-                const m = (err && err.message) || 'Échec de la connexion';
-                let fr = m;
-                if (/Invalid login credentials/i.test(m)) fr = 'E-mail ou mot de passe incorrect.';
-                else if (/Email not confirmed/i.test(m)) fr = "E-mail non confirmé : cliquez sur le lien reçu par e-mail.";
-                else if (/already registered/i.test(m)) fr = 'Cet e-mail possède déjà un compte : utilisez « Se connecter ».';
-                else if (/Password should be at least/i.test(m)) fr = 'Mot de passe trop court (6 caractères minimum).';
-                showAuthMsg(fr, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = authTab === 'login' ? 'Se connecter' : 'Créer mon compte';
-            }
-        }
-
-        async function handleAccount() {
-            if (!currentUser) { showAuth(); return; }
-            if (!confirm('Se déconnecter ? Vos données restent dans le cloud.')) return;
-            try {
-                await sb.auth.signOut();
-                currentUser = null;
-                cloudReady = false;
-                renderAccount();
-                setSync('offline');
-                showAuth();
-            } catch (e) {
-                showToast('Déconnexion impossible', 'error');
-            }
-        }
-
-        /* ---------------- Rendu ---------------- */
-        function renderApp() {
-            const filter = document.getElementById('monthFilter').value;
-            let list = primes;
-            if (filter !== 'ALL') {
-                list = primes.filter(p => p.date && p.date.startsWith(filter));
-            }
-
-            // Groupements
-            const payeList = list.filter(p => p.statut === 'Payé');
-            const oublieList = list.filter(p => p.statut === 'Oublié');
-            const encoursList = list.filter(p => p.statut === 'À venir');
-
-            const countNiv = (arr, niv) => arr.filter(p => p.niveau === niv).length;
-            const sumBrut = arr => arr.reduce((acc, curr) => acc + (curr.brut || 0), 0);
-
-            const payeBrut = sumBrut(payeList);
-            const oublieBrut = sumBrut(oublieList);
-            const encoursBrut = sumBrut(encoursList);
-            const totalBrut = sumBrut(list);
-
-            // Rendu des cartes KPI
-            const kpiContainer = document.getElementById('kpiCards');
-            kpiContainer.innerHTML = `
-                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-emerald-200 border-l-4 border-l-emerald-600 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-emerald-700 mb-1">
-                        <span class="text-xs font-bold uppercase tracking-wider">Primes Payées</span>
-                        <span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">${payeList.length}</span>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-slate-900">${payeBrut} € <span class="text-xs font-normal text-slate-500">brut</span></div>
-                        <div class="text-xs font-semibold text-emerald-600 mt-1">~ ${(payeBrut * 0.78).toFixed(2)} € net</div>
-                        <div class="mt-2 text-xs font-medium text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100">
-                            ${countNiv(payeList, 'Niveau 2')} Niv. 2 | ${countNiv(payeList, 'Niveau 1')} Niv. 1
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-rose-200 border-l-4 border-l-rose-600 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-rose-700 mb-1">
-                        <span class="text-xs font-bold uppercase tracking-wider">Oubliées / En retard</span>
-                        <span class="bg-rose-100 text-rose-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">${oublieList.length}</span>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-slate-900">${oublieBrut} € <span class="text-xs font-normal text-slate-500">brut</span></div>
-                        <div class="text-xs font-semibold text-rose-600 mt-1">~ ${(oublieBrut * 0.78).toFixed(2)} € net</div>
-                        <div class="mt-2 text-xs font-medium text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100">
-                            ${countNiv(oublieList, 'Niveau 2')} Niv. 2 | ${countNiv(oublieList, 'Niveau 1')} Niv. 1
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-amber-200 border-l-4 border-l-amber-500 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-amber-700 mb-1">
-                        <span class="text-xs font-bold uppercase tracking-wider">En cours / À venir</span>
-                        <span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">${encoursList.length}</span>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-slate-900">${encoursBrut} € <span class="text-xs font-normal text-slate-500">brut</span></div>
-                        <div class="text-xs font-semibold text-amber-600 mt-1">~ ${(encoursBrut * 0.78).toFixed(2)} € net</div>
-                        <div class="mt-2 text-xs font-medium text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100">
-                            ${countNiv(encoursList, 'Niveau 2')} Niv. 2 | ${countNiv(encoursList, 'Niveau 1')} Niv. 1
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-brand-200 border-l-4 border-l-brand-600 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-brand-700 mb-1">
-                        <span class="text-xs font-bold uppercase tracking-wider">Bilan Général 2026</span>
-                        <span class="bg-brand-100 text-brand-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">${list.length}</span>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-slate-900">${totalBrut} € <span class="text-xs font-normal text-slate-500">brut</span></div>
-                        <div class="text-xs font-semibold text-brand-600 mt-1">~ ${(totalBrut * 0.78).toFixed(2)} € net</div>
-                        <div class="mt-2 text-xs font-medium text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100">
-                            Total: ${countNiv(list, 'Niveau 2')} Niv. 2 | ${countNiv(list, 'Niveau 1')} Niv. 1
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Rendu Tableau
-            const tbody = document.getElementById('primeTableBody');
-            const emptyState = document.getElementById('emptyState');
-            document.getElementById('rowCountBadge').textContent = `${list.length} prime(s)`;
-
-            if (list.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
-
-            // Tri par date décroissante
-            const sorted = [...list].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            tbody.innerHTML = sorted.map(p => {
-                let badgeStyle = '';
-                let badgeIcon = '';
-                if (p.statut === 'Payé') {
-                    badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200';
-                    badgeIcon = '<i class="fa-solid fa-circle-check me-1"></i>';
-                } else if (p.statut === 'Oublié') {
-                    badgeStyle = 'bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200 animate-pulse';
-                    badgeIcon = '<i class="fa-solid fa-triangle-exclamation me-1"></i>';
-                } else {
-                    badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200';
-                    badgeIcon = '<i class="fa-solid fa-clock me-1"></i>';
-                }
-
-                const dFormatted = p.date ? new Date(p.date).toLocaleDateString('fr-FR') : '-';
-
-                return `
-                    <tr class="hover:bg-slate-50/80 transition">
-                        <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">${dFormatted}</td>
-                        <td class="px-4 py-3">
-                            <div class="font-bold text-slate-900">${p.systeme || '-'}</div>
-                            <div class="text-xs text-slate-400">${p.projet || ''}</div>
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <span class="text-xs font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200">${p.niveau}</span>
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <div class="font-bold text-slate-900">${p.brut} €</div>
-                            <div class="text-xs text-slate-400">~ ${(p.brut * 0.78).toFixed(1)} € net</div>
-                        </td>
-                        <td class="px-4 py-3 text-center whitespace-nowrap">
-                            <button onclick="cycleStatut(${p.id})" title="Cliquer pour basculer le statut" class="px-3 py-1 rounded-full text-xs font-bold transition shadow-sm border ${badgeStyle}">
-                                ${badgeIcon} ${p.statut}
-                            </button>
-                        </td>
-                        <td class="px-4 py-3 text-xs text-slate-600 max-w-xs truncate" title="${p.comment || ''}">
-                            ${p.comment ? `<i class="fa-regular fa-comment text-slate-400 me-1"></i>${p.comment}` : '<span class="text-slate-300">-</span>'}
-                        </td>
-                        <td class="px-3 py-3 text-right whitespace-nowrap">
-                            <button onclick="deletePrime(${p.id})" title="Supprimer la prime" class="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition active:scale-95">
-                                <i class="fa-solid fa-trash-can text-sm"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        /* ---------------- Actions ---------------- */
-        function saveData() {
-            writeLocal();
-            renderApp();
-            schedulePush();
-        }
-
-        // Basculement statut au clic
-        function cycleStatut(id) {
-            const p = primes.find(item => item.id === id);
-            if (!p) return;
-            if (p.statut === 'À venir') p.statut = 'Payé';
-            else if (p.statut === 'Payé') p.statut = 'Oublié';
-            else p.statut = 'À venir';
-
-            saveData();
-            showToast(`Statut mis à jour : ${p.statut}`);
         }
 
         function addPrime(e) {
@@ -848,89 +240,141 @@
             const systeme = document.getElementById('systemeInput').value.trim();
             const projet = document.getElementById('projetInput').value.trim();
             const comment = document.getElementById('commentInput').value.trim();
-
             const brut = calculateBrut(date, niveau);
+            const newId = primes.length > 0 ? Math.max(...primes.map(p => p.id)) + 1 : 1;
 
-            primes.push({
-                id: Date.now(),
-                date,
-                niveau,
-                statut,
-                systeme,
-                projet,
-                comment,
-                brut
-            });
-
-            saveData();
-            showToast('Nouvelle prime enregistrée !');
+            primes.push({ id: newId, date, niveau, statut, systeme, projet, comment, brut });
+            writeLocal();
+            renderApp();
 
             document.getElementById('systemeInput').value = '';
             document.getElementById('projetInput').value = '';
             document.getElementById('commentInput').value = '';
+            showToast('Prime enregistrée !');
         }
 
-        // Suppression directe sans confirmation popup pour garantir la compatibilité mobile/desktop
+        function cycleStatut(id) {
+            const p = primes.find(item => item.id === id);
+            if (!p) return;
+            const cycle = ['À venir', 'Payé', 'Oublié'];
+            p.statut = cycle[(cycle.indexOf(p.statut) + 1) % cycle.length];
+            writeLocal();
+            renderApp();
+            showToast(`Statut : ${p.statut}`);
+        }
+
         function deletePrime(id) {
-            primes = primes.filter(p => p.id !== id);
-            saveData();
+            if (!confirm("Supprimer cette prime ?")) return;
+            primes = primes.filter(item => item.id !== id);
+            writeLocal();
+            renderApp();
             showToast('Prime supprimée');
         }
 
         function resetData() {
-            primes = cloneSeed();
-            saveData();
-            showToast('Données réinitialisées');
+            if (!confirm("Réinitialiser avec les 23 primes d'origine ?")) return;
+            primes = initialPrimesExcel.map(p => ({...p}));
+            writeLocal();
+            renderApp();
+            showToast('Réinitialisé');
         }
 
         function exportJSON() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(primes, null, 2));
-            const anchor = document.createElement('a');
-            anchor.setAttribute("href", dataStr);
-            anchor.setAttribute("download", `primes_backup_${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-            showToast("Sauvegarde exportée");
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = `primes_2026.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            showToast('Export réussi !');
         }
 
-        function importJSON(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const imported = JSON.parse(event.target.result);
-                    if (Array.isArray(imported)) {
-                        primes = imported;
-                        saveData();
-                        showToast("Importation réussie");
-                    }
-                } catch(err) {
-                    alert("Fichier non valide");
-                }
-            };
-            reader.readAsText(file);
-            e.target.value = '';
+        function renderApp() {
+            const filterVal = document.getElementById('monthFilter').value;
+            const filtered = primes.filter(p => filterVal === 'ALL' || (p.date && p.date.startsWith(filterVal)));
+
+            let totalBrut = 0, payeBrut = 0, venirBrut = 0, oublieBrut = 0;
+            filtered.forEach(p => {
+                const b = Number(p.brut) || 0;
+                totalBrut += b;
+                if (p.statut === 'Payé') payeBrut += b;
+                else if (p.statut === 'Oublié') oublieBrut += b;
+                else venirBrut += b;
+            });
+
+            const net = val => Math.round(val * 0.78);
+
+            document.getElementById('kpiCards').innerHTML = `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
+                    <div class="text-slate-500 text-xs font-bold uppercase">Total Sélection</div>
+                    <div class="text-2xl font-extrabold text-slate-900">${totalBrut} € <span class="text-xs text-slate-400">brut</span></div>
+                    <div class="text-xs font-semibold text-emerald-600">≈ ${net(totalBrut)} € net</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
+                    <div class="text-slate-500 text-xs font-bold uppercase">Payé</div>
+                    <div class="text-2xl font-extrabold text-emerald-600">${payeBrut} € <span class="text-xs text-slate-400">brut</span></div>
+                    <div class="text-xs text-slate-500">≈ ${net(payeBrut)} € net</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
+                    <div class="text-slate-500 text-xs font-bold uppercase">À venir</div>
+                    <div class="text-2xl font-extrabold text-amber-600">${venirBrut} € <span class="text-xs text-slate-400">brut</span></div>
+                    <div class="text-xs text-slate-500">≈ ${net(venirBrut)} € net</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
+                    <div class="text-slate-500 text-xs font-bold uppercase">Oublié / À relancer</div>
+                    <div class="text-2xl font-extrabold text-rose-600">${oublieBrut} € <span class="text-xs text-slate-400">brut</span></div>
+                    <div class="text-xs text-slate-500">≈ ${net(oublieBrut)} € net</div>
+                </div>
+            `;
+
+            const tbody = document.getElementById('primeTableBody');
+            document.getElementById('rowCountBadge').textContent = filtered.length;
+            filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let html = '';
+            filtered.forEach(p => {
+                const b = Number(p.brut) || 0;
+                const [yyyy, mm, dd] = p.date ? p.date.split('-') : ['--', '--', '--'];
+                const dateF = p.date ? `${dd}/${mm}/${yyyy}` : '--';
+                
+                let badge = 'bg-amber-100 text-amber-800 border-amber-300';
+                if (p.statut === 'Payé') badge = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                if (p.statut === 'Oublié') badge = 'bg-rose-100 text-rose-800 border-rose-300';
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-4 py-3.5 font-semibold text-slate-800">${dateF}</td>
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-slate-900">${p.systeme || '—'}</div>
+                            <div class="text-xs text-slate-500">${p.projet || ''}</div>
+                        </td>
+                        <td class="px-4 py-3.5"><span class="px-2 py-1 rounded-lg text-xs font-bold bg-brand-50 text-brand-700">${p.niveau}</span></td>
+                        <td class="px-4 py-3.5">
+                            <div class="font-extrabold text-slate-900">${b} €</div>
+                            <div class="text-xs text-slate-500">~${net(b)} € net</div>
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <button onclick="cycleStatut(${p.id})" class="px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${badge}">${p.statut}</button>
+                        </td>
+                        <td class="px-4 py-3.5 text-xs text-slate-500">${p.comment || '—'}</td>
+                        <td class="px-3 py-3.5 text-right">
+                            <button onclick="deletePrime(${p.id})" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
         }
 
-        function showToast(msg, type) {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            icon.className = type === 'error'
-                ? 'fa-solid fa-circle-exclamation text-rose-400'
-                : 'fa-solid fa-circle-check text-emerald-400';
+        function showToast(msg) {
+            const t = document.getElementById('toast');
             document.getElementById('toastMsg').textContent = msg;
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            toast.classList.add('translate-y-0', 'opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
+            t.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
         }
 
-        window.onload = init;
+        window.addEventListener('DOMContentLoaded', init);
     </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
