@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Suivi Primes de Déplacement 2026</title>
     <meta name="theme-color" content="#1e3a8a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Primes 2026">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -13,48 +16,74 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Supabase JS -->
+    <!-- Supabase JS (client cloud) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
                     colors: {
                         brand: {
-                            50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6',
-                            600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a',
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
                         }
                     }
                 }
             }
         }
     </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
 </head>
 <body class="h-full font-sans text-slate-800 antialiased flex flex-col min-h-screen">
 
     <!-- Header Navigation -->
     <header class="bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 text-white shadow-lg sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white/10 p-2.5 rounded-xl border border-white/20">
-                    <i class="fa-solid fa-truck-fast text-xl text-amber-400"></i>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                <div class="bg-white/10 p-2 sm:p-2.5 rounded-xl backdrop-blur-md border border-white/20 shrink-0">
+                    <i class="fa-solid fa-truck-fast text-lg sm:text-2xl text-amber-400"></i>
                 </div>
-                <div>
-                    <h1 class="text-base sm:text-xl font-extrabold tracking-tight">Suivi Primes Déplacement</h1>
+                <div class="min-w-0">
+                    <h1 class="text-base sm:text-xl font-extrabold tracking-tight truncate">Suivi Primes Déplacement</h1>
                     <p class="text-xs text-brand-100 hidden sm:block">Revalorisation au 01/10/2026 : N1 = 41€ / N2 = 83€</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-2">
-                <div id="syncBadge" title="État" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/10 text-xs font-semibold">
+
+            <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+                <!-- Indicateur de synchronisation -->
+                <div id="syncBadge" title="État de la synchronisation" class="flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs font-semibold">
                     <i id="syncIcon" class="fa-solid fa-circle text-[7px] text-slate-300"></i>
-                    <span id="syncText">Local</span>
+                    <span id="syncText" class="hidden sm:inline">Local</span>
                 </div>
-                <button onclick="exportJSON()" title="Exporter" class="px-3 py-1.5 bg-white/10 hover:bg-white/25 rounded-lg text-xs font-semibold flex items-center space-x-1.5 border border-white/10">
+                <button id="pullBtn" onclick="cloudPull(false)" title="Récupérer les données du cloud" class="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs transition border border-white/10 hidden">
+                    <i class="fa-solid fa-rotate text-blue-200"></i>
+                </button>
+                <button onclick="exportJSON()" title="Exporter mes données en sauvegarde" class="px-2 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition backdrop-blur-sm flex items-center space-x-1.5 border border-white/10">
                     <i class="fa-solid fa-download text-amber-300"></i>
                     <span class="hidden sm:inline">Exporter</span>
                 </button>
-                <button id="accountBtn" onclick="handleAccount()" title="Compte Cloud" class="p-2 bg-white/10 hover:bg-white/25 rounded-lg text-xs border border-white/10">
+                <label title="Importer un fichier de sauvegarde" class="px-2 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition backdrop-blur-sm flex items-center space-x-1.5 border border-white/10 cursor-pointer">
+                    <i class="fa-solid fa-upload text-blue-200"></i>
+                    <span class="hidden sm:inline">Importer</span>
+                    <input type="file" id="importInput" accept=".json" class="hidden" onchange="importJSON(event)">
+                </label>
+                <button onclick="resetData()" title="Réinitialiser avec les 23 primes d'origine du fichier Excel" class="p-2 bg-rose-500/30 hover:bg-rose-500/50 text-rose-100 rounded-lg text-xs transition border border-rose-300/30">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+                <button id="accountBtn" onclick="handleAccount()" title="Compte" class="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs transition border border-white/10">
                     <i id="accountIcon" class="fa-solid fa-user text-slate-200"></i>
                 </button>
             </div>
@@ -62,361 +91,96 @@
     </header>
 
     <!-- Main Container -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 sm:space-y-6">
 
-        <!-- Barre de filtre -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <!-- Bandeau configuration -->
+        <div id="configBanner" class="hidden bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-4 text-sm space-y-2">
+            <div class="flex items-start space-x-3">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+                <div class="space-y-1">
+                    <p class="font-bold">Mode local : les données restent sur cet appareil uniquement.</p>
+                    <p class="text-xs leading-relaxed">Pour retrouver vos primes sur tous vos appareils (PC, téléphone, tablette), renseignez votre clé Supabase dans le bloc <code class="bg-amber-100 px-1 rounded font-mono text-[11px]">CLOUD_CONFIG</code> en bas du script.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar de filtre & Taux Net -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
             <div class="flex items-center space-x-3">
-                <div class="p-2 bg-brand-50 text-brand-600 rounded-lg"><i class="fa-solid fa-filter"></i></div>
-                <label for="monthFilter" class="text-sm font-semibold text-slate-700">Filtrer par période :</label>
-                <select id="monthFilter" onchange="renderApp()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl p-2.5 font-semibold">
+                <div class="p-2 bg-brand-50 text-brand-600 rounded-lg">
+                    <i class="fa-solid fa-filter"></i>
+                </div>
+                <label for="monthFilter" class="text-sm font-semibold text-slate-700 whitespace-nowrap">Filtrer par période :</label>
+                <select id="monthFilter" onchange="renderApp()" class="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
                     <option value="ALL">Toute l'année (23 primes)</option>
                     <option value="2026-09">Septembre 2026</option>
                     <option value="2026-10">Octobre 2026</option>
                 </select>
             </div>
-            <div class="text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-slate-600 flex items-center space-x-2">
-                <i class="fa-solid fa-calculator text-brand-600"></i>
-                <span>Taux Net estimé : <strong class="text-slate-800">~78 %</strong></span>
+
+            <div class="flex flex-wrap items-center gap-3 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-slate-600">
+                <div class="flex items-center space-x-1.5">
+                    <i class="fa-solid fa-calculator text-brand-600"></i>
+                    <span>Taux Net estimé : <strong class="text-slate-800">~78 %</strong></span>
+                </div>
+                <span class="text-slate-300">|</span>
+                <div class="flex items-center space-x-1">
+                    <i class="fa-solid fa-arrow-trend-up text-emerald-600"></i>
+                    <span>Tarifs : <strong class="text-slate-800">N1: 41€ / N2: 83€</strong> (depuis 01/10)</span>
+                </div>
             </div>
         </div>
 
         <!-- Dashboard KPI -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpiCards"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpiCards">
+            <!-- Dynamic KPI Render -->
+        </div>
 
-        <!-- Layout Formulaire + Tableau -->
+        <!-- Layout 2 colonnes: Formulaire + Tableau -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Formulaire -->
+
+            <!-- Formulaire de saisie (4 Colonnes) -->
             <div class="lg:col-span-4">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                    <h2 class="text-base font-bold text-slate-800 mb-4 pb-2 border-b">Saisir un retour de prime</h2>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 lg:sticky lg:top-20">
+                    <div class="flex items-center space-x-2.5 pb-3 mb-4 border-b border-slate-100">
+                        <div class="p-2 bg-brand-50 text-brand-600 rounded-lg">
+                            <i class="fa-solid fa-calendar-plus text-base"></i>
+                        </div>
+                        <h2 class="text-base font-bold text-slate-800">Saisir un retour de prime</h2>
+                    </div>
+
                     <form id="primeForm" onsubmit="addPrime(event)" class="space-y-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Date *</label>
-                            <input type="date" id="dateInput" required onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2.5 font-semibold">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Date de retour *</label>
+                            <input type="date" id="dateInput" required onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
                         </div>
+
                         <div>
-                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Niveau *</label>
-                            <select id="niveauInput" onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2.5 font-semibold">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Niveau de prime *</label>
+                            <select id="niveauInput" onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
                                 <option value="Niveau 2" selected>Niveau 2</option>
                                 <option value="Niveau 1">Niveau 1</option>
                             </select>
-                            <div id="tarifNotice" class="mt-1.5 text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-100 p-2 rounded-lg flex justify-between">
+                            <div id="tarifNotice" class="mt-1.5 text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-100 p-2 rounded-lg flex items-center justify-between">
                                 <span>Montant calculé :</span>
-                                <span class="font-bold text-sm" id="tarifNoticeValue">78,00 € brut</span>
+                                <span class="font-bold text-sm text-brand-800" id="tarifNoticeValue">78,00 € brut</span>
                             </div>
                         </div>
+
                         <div>
-                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Statut</label>
-                            <select id="statutInput" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2.5 font-semibold">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Statut initial</label>
+                            <select id="statutInput" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
                                 <option value="À venir">🟠 En cours / À venir</option>
                                 <option value="Payé">🟢 Payé</option>
                                 <option value="Oublié">🔴 Oublié / À relancer</option>
                             </select>
                         </div>
+
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Système</label>
-                                <input type="text" id="systemeInput" placeholder="ex: A18D" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2 font-medium">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Système</label>
+                                <input type="text" id="systemeInput" placeholder="ex: A18D" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2 font-medium">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Projet</label>
-                                <input type="text" id="projetInput" placeholder="ex: MFM" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2 font-medium">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Remarque</label>
-                            <textarea id="commentInput" rows="2" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-2"></textarea>
-                        </div>
-                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-plus"></i><span>Enregistrer</span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Tableau -->
-            <div class="lg:col-span-8">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
-                        <h2 class="text-base font-bold text-slate-800">Historique des primes</h2>
-                        <span id="rowCountBadge" class="bg-slate-200 text-slate-700 text-xs font-extrabold px-2.5 py-1 rounded-full">0</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-slate-600">
-                            <thead class="bg-slate-100 text-xs uppercase font-bold text-slate-500 border-b">
-                                <tr>
-                                    <th class="px-4 py-3">Date</th>
-                                    <th class="px-4 py-3">Système / Projet</th>
-                                    <th class="px-4 py-3">Niveau</th>
-                                    <th class="px-4 py-3">Brut / Net</th>
-                                    <th class="px-4 py-3 text-center">Statut</th>
-                                    <th class="px-4 py-3">Remarque</th>
-                                    <th class="px-3 py-3 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="primeTableBody" class="divide-y divide-slate-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal d'authentification Cloud -->
-    <div id="authOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4">
-            <h2 class="text-lg font-extrabold text-slate-900">Connexion Cloud Partagée</h2>
-            <p class="text-xs text-slate-500">Connectez-vous pour synchroniser vos primes sur tous vos appareils.</p>
-            <form onsubmit="submitAuth(event)" class="space-y-3">
-                <input type="email" id="authEmail" required placeholder="Votre e-mail" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-3">
-                <input type="password" id="authPassword" required placeholder="Mot de passe" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl p-3">
-                <button type="submit" class="w-full bg-brand-600 text-white font-bold py-3 rounded-xl shadow-md">Se connecter / S'inscrire</button>
-            </form>
-            <button onclick="document.getElementById('authOverlay').classList.add('hidden')" class="w-full text-xs text-slate-400 underline">Fermer</button>
-        </div>
-    </div>
-
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3">
-        <i class="fa-solid fa-circle-check text-emerald-400"></i>
-        <span id="toastMsg" class="text-sm font-medium">Action réussie</span>
-    </div>
-
-    <!-- Script Application -->
-    <script>
-        const CLOUD_CONFIG = {
-            SUPABASE_URL: "https://ciydosokvkulbqdbebqq.supabase.co",
-            SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // Pensez à remplacer par votre vraie clé Anon publique Supabase complète si nécessaire
-        };
-
-        const LOCAL_KEY = 'app_primes_v2026';
-        const initialPrimesExcel = [
-            { id: 1, date: '2026-09-02', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 2, date: '2026-09-11', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 3, date: '2026-09-14', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 4, date: '2026-09-15', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 5, date: '2026-09-16', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 6, date: '2026-09-28', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 7, date: '2026-09-29', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 8, date: '2026-09-30', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Payé', comment: '' },
-            { id: 9, date: '2026-09-30', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 1', brut: 39, statut: 'Payé', comment: '' },
-            { id: 10, date: '2026-09-03', systeme: 'A9 SOLSTICE SN02', projet: 'EAU (ESSAIS)', niveau: 'Niveau 2', brut: 78, statut: 'Oublié', comment: 'Relancer paie' },
-            { id: 11, date: '2026-10-01', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: 'Revalorisé' },
-            { id: 12, date: '2026-10-05', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 1', brut: 41, statut: 'À venir', comment: '' },
-            { id: 13, date: '2026-10-06', systeme: 'A18D', projet: 'MFM (ESSAIS)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 14, date: '2026-10-19', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 15, date: '2026-10-20', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 16, date: '2026-10-21', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 17, date: '2026-10-22', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 18, date: '2026-10-23', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 19, date: '2026-10-24', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 20, date: '2026-10-25', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 21, date: '2026-10-26', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 22, date: '2026-10-27', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 2', brut: 83, statut: 'À venir', comment: '' },
-            { id: 23, date: '2026-10-28', systeme: 'A18D', projet: 'MFM (Caliopé)', niveau: 'Niveau 1', brut: 41, statut: 'À venir', comment: '' }
-        ];
-
-        let primes = [];
-        let sb = null;
-        let currentUser = null;
-
-        function isConfigured() {
-            return CLOUD_CONFIG.SUPABASE_URL.indexOf('http') === 0 && CLOUD_CONFIG.SUPABASE_ANON_KEY.length > 20;
-        }
-
-        async function init() {
-            primes = JSON.parse(localStorage.getItem(LOCAL_KEY)) || initialPrimesExcel.map(p => ({...p}));
-            document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-            updateTarifNotice();
-            renderApp();
-
-            if (!isConfigured()) return;
-
-            try {
-                sb = window.supabase.createClient(CLOUD_CONFIG.SUPABASE_URL, CLOUD_CONFIG.SUPABASE_ANON_KEY);
-                const session = (await sb.auth.getSession()).data.session;
-                if (session) {
-                    currentUser = session.user;
-                    setSync('ok', 'Connecté');
-                    await cloudPull();
-                    subscribeRealtime();
-                } else {
-                    setSync('offline', 'Non connecté');
-                }
-            } catch (e) { setSync('error', 'Erreur cloud'); }
-        }
-
-        async function cloudPull() {
-            if (!sb || !currentUser) return;
-            const { data } = await sb.from('primes').select('*').eq('user_id', currentUser.id);
-            if (data && data.length > 0) {
-                primes = data.map(r => ({ ...r, id: Number(r.id), brut: Number(r.brut) }));
-                localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
-                renderApp();
-            }
-        }
-
-        async function pushCloud() {
-            if (!sb || !currentUser) return;
-            await sb.from('primes').delete().eq('user_id', currentUser.id);
-            const rows = primes.map(p => ({ ...p, user_id: currentUser.id }));
-            if (rows.length > 0) await sb.from('primes').insert(rows);
-            setSync('ok', 'Synchronisé');
-        }
-
-        function subscribeRealtime() {
-            if (!sb || !currentUser) return;
-            sb.channel('public:primes')
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'primes', filter: `user_id=eq.${currentUser.id}` }, () => cloudPull())
-              .subscribe();
-        }
-
-        function setSync(state, label) {
-            const colors = { local: 'text-slate-300', offline: 'text-amber-300', ok: 'text-emerald-300', error: 'text-rose-400' };
-            document.getElementById('syncIcon').className = 'fa-solid fa-circle text-[7px] ' + (colors[state] || colors.local);
-            document.getElementById('syncText').textContent = label;
-        }
-
-        function handleAccount() {
-            if (!isConfigured()) { alert("Veuillez renseigner vos clés Supabase dans le code source."); return; }
-            if (currentUser) {
-                if (confirm(`Déconnecter ${currentUser.email} ?`)) { sb.auth.signOut(); currentUser = null; location.reload(); }
-            } else {
-                document.getElementById('authOverlay').classList.remove('hidden');
-            }
-        }
-
-        async function submitAuth(e) {
-            e.preventDefault();
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            let res = await sb.auth.signInWithPassword({ email, password });
-            if (res.error) res = await sb.auth.signUp({ email, password });
-            if (res.error) { alert(res.error.message); return; }
-            alert('Connexion réussie !');
-            location.reload();
-        }
-
-        function calculateBrut(dateStr, niveau) {
-            if (!dateStr) return 0;
-            return new Date(dateStr) >= new Date('2026-10-01') ? (niveau === 'Niveau 1' ? 41 : 83) : (niveau === 'Niveau 1' ? 39 : 78);
-        }
-
-        function updateTarifNotice() {
-            const brut = calculateBrut(document.getElementById('dateInput').value, document.getElementById('niveauInput').value);
-            document.getElementById('tarifNoticeValue').textContent = `${brut},00 € brut`;
-        }
-
-        function addPrime(e) {
-            e.preventDefault();
-            const date = document.getElementById('dateInput').value;
-            const niveau = document.getElementById('niveauInput').value;
-            const statut = document.getElementById('statutInput').value;
-            const systeme = document.getElementById('systemeInput').value.trim();
-            const projet = document.getElementById('projetInput').value.trim();
-            const comment = document.getElementById('commentInput').value.trim();
-            const brut = calculateBrut(date, niveau);
-            const id = primes.length > 0 ? Math.max(...primes.map(p => p.id)) + 1 : 1;
-
-            primes.push({ id, date, niveau, statut, systeme, projet, comment, brut });
-            localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
-            pushCloud();
-            renderApp();
-            showToast('Prime enregistrée !');
-        }
-
-        function cycleStatut(id) {
-            const p = primes.find(item => item.id === id);
-            if (!p) return;
-            const cycle = ['À venir', 'Payé', 'Oublié'];
-            p.statut = cycle[(cycle.indexOf(p.statut) + 1) % cycle.length];
-            localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
-            pushCloud();
-            renderApp();
-        }
-
-        function deletePrime(id) {
-            if (!confirm("Supprimer ?")) return;
-            primes = primes.filter(item => item.id !== id);
-            localStorage.setItem(LOCAL_KEY, JSON.stringify(primes));
-            pushCloud();
-            renderApp();
-        }
-
-        function exportJSON() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(primes, null, 2));
-            const a = document.createElement('a');
-            a.href = dataStr; a.download = `primes_2026.json`;
-            document.body.appendChild(a); a.click(); a.remove();
-        }
-
-        function renderApp() {
-            const filterVal = document.getElementById('monthFilter').value;
-            const filtered = primes.filter(p => filterVal === 'ALL' || (p.date && p.date.startsWith(filterVal)));
-            let totalBrut = 0, payeBrut = 0, venirBrut = 0, oublieBrut = 0;
-            filtered.forEach(p => {
-                const b = Number(p.brut) || 0;
-                totalBrut += b;
-                if (p.statut === 'Payé') payeBrut += b;
-                else if (p.statut === 'Oublié') oublieBrut += b;
-                else venirBrut += b;
-            });
-            const net = val => Math.round(val * 0.78);
-
-            document.getElementById('kpiCards').innerHTML = `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
-                    <div class="text-slate-500 text-xs font-bold uppercase">Total Sélection</div>
-                    <div class="text-2xl font-extrabold text-slate-900">${totalBrut} €</div>
-                    <div class="text-xs text-emerald-600 font-semibold">≈ ${net(totalBrut)} € net</div>
-                </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
-                    <div class="text-slate-500 text-xs font-bold uppercase">Payé</div>
-                    <div class="text-2xl font-extrabold text-emerald-600">${payeBrut} €</div>
-                    <div class="text-xs text-slate-500">≈ ${net(payeBrut)} € net</div>
-                </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
-                    <div class="text-slate-500 text-xs font-bold uppercase">À venir</div>
-                    <div class="text-2xl font-extrabold text-amber-600">${venirBrut} €</div>
-                    <div class="text-xs text-slate-500">≈ ${net(venirBrut)} € net</div>
-                </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-1">
-                    <div class="text-slate-500 text-xs font-bold uppercase">Oublié</div>
-                    <div class="text-2xl font-extrabold text-rose-600">${oublieBrut} €</div>
-                    <div class="text-xs text-slate-500">≈ ${net(oublieBrut)} € net</div>
-                </div>
-            `;
-
-            const tbody = document.getElementById('primeTableBody');
-            document.getElementById('rowCountBadge').textContent = filtered.length;
-            filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            tbody.innerHTML = filtered.map(p => {
-                const b = Number(p.brut) || 0;
-                const [y, m, d] = p.date ? p.date.split('-') : ['--', '--', '--'];
-                let badge = p.statut === 'Payé' ? 'bg-emerald-100 text-emerald-800' : (p.statut === 'Oublié' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
-                return `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="px-4 py-3 font-semibold">${d}/${m}/${y}</td>
-                        <td class="px-4 py-3"><div class="font-bold">${p.systeme || '—'}</div><div class="text-xs text-slate-500">${p.projet || ''}</div></td>
-                        <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-bold bg-brand-50 text-brand-700">${p.niveau}</span></td>
-                        <td class="px-4 py-3"><div class="font-extrabold">${b} €</div><div class="text-xs text-slate-500">~${net(b)} €</div></td>
-                        <td class="px-4 py-3 text-center"><button onclick="cycleStatut(${p.id})" class="px-3 py-1 rounded-full text-xs font-bold border ${badge}">${p.statut}</button></td>
-                        <td class="px-4 py-3 text-xs text-slate-500">${p.comment || '—'}</td>
-                        <td class="px-3 py-3 text-right"><button onclick="deletePrime(${p.id})" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash-can"></i></button></td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            document.getElementById('toastMsg').textContent = msg;
-            t.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
-        }
-
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
-</html>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Projet / Motif</label>
+                                <input
