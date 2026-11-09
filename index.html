@@ -110,7 +110,7 @@
                 </div>
                 <label for="monthFilter" class="text-sm font-semibold text-slate-700 whitespace-nowrap">Filtrer par période :</label>
                 <select id="monthFilter" onchange="renderApp()" class="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
-                    <option value="ALL">Toute l'année</option>
+                    <option value="ALL">Toutes les années</option>
                 </select>
             </div>
 
@@ -648,28 +648,70 @@
         }
 
         /* ---------------- Rendu ---------------- */
+        let filterInitialized = false;
+
         function buildMonthFilter() {
             const sel = document.getElementById('monthFilter');
-            const current = sel.value || 'ALL';
             const names = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-            const months = new Set();
-            primes.forEach(p => { if (p.date && p.date.length >= 7) months.add(p.date.slice(0, 7)); });
-            const list = Array.from(months).sort();
-            let html = '<option value="ALL">Toute l\'année</option>';
-            list.forEach(m => {
-                const parts = m.split('-');
-                html += '<option value="' + m + '">' + names[parseInt(parts[1], 10) - 1] + ' ' + parts[0] + '</option>';
+            const thisYear = String(new Date().getFullYear());
+
+            // Années présentes dans les données (+ l'année en cours, même vide)
+            const years = {};
+            years[thisYear] = new Set();
+            primes.forEach(p => {
+                if (p.date && p.date.length >= 7) {
+                    const y = p.date.slice(0, 4);
+                    if (!years[y]) years[y] = new Set();
+                    years[y].add(p.date.slice(0, 7));
+                }
             });
+            const yearList = Object.keys(years).sort().reverse();
+
+            const valid = ['ALL'];
+            let html = '<option value="ALL">Toutes les années</option>';
+            yearList.forEach(y => {
+                html += '<optgroup label="' + y + '">';
+                html += '<option value="Y' + y + '">Toute l\'année ' + y + '</option>';
+                valid.push('Y' + y);
+                Array.from(years[y]).sort().forEach(m => {
+                    html += '<option value="' + m + '">' + names[parseInt(m.slice(5, 7), 10) - 1] + ' ' + y + '</option>';
+                    valid.push(m);
+                });
+                html += '</optgroup>';
+            });
+
+            let current = sel.value;
+            if (!filterInitialized) {
+                current = 'Y' + thisYear;   // au démarrage : l'année en cours
+                filterInitialized = true;
+            }
             sel.innerHTML = html;
-            sel.value = (current === 'ALL' || list.indexOf(current) !== -1) ? current : 'ALL';
+            sel.value = (valid.indexOf(current) !== -1) ? current : 'Y' + thisYear;
         }
 
         function renderApp() {
             buildMonthFilter();
             const filter = document.getElementById('monthFilter').value;
-            let list = primes;
-            if (filter !== 'ALL') {
-                list = primes.filter(p => p.date && p.date.startsWith(filter));
+            const selOpt = document.getElementById('monthFilter').selectedOptions[0];
+            let list, cumList, cumTitle, cumLabel;
+            if (filter === 'ALL') {
+                list = primes;
+                cumList = primes;
+                cumTitle = 'Bilan Général';
+                cumLabel = 'Cumul de toutes les années';
+            } else if (filter.charAt(0) === 'Y') {
+                const y = filter.slice(1);
+                list = primes.filter(p => p.date && p.date.slice(0, 4) === y);
+                cumList = list;
+                cumTitle = 'Bilan Général ' + y;
+                cumLabel = "Cumul de l'année " + y;
+            } else {
+                const y = filter.slice(0, 4);
+                list = primes.filter(p => p.date && p.date.slice(0, 7) === filter);
+                // Bilan : de janvier jusqu'au mois choisi, dans la même année uniquement
+                cumList = primes.filter(p => p.date && p.date.slice(0, 4) === y && p.date.slice(0, 7) <= filter);
+                cumTitle = 'Bilan Général ' + y;
+                cumLabel = "Cumul jusqu'à " + (selOpt ? selOpt.textContent : filter);
             }
 
             // Groupements
@@ -683,11 +725,7 @@
             const payeBrut = sumBrut(payeList);
             const oublieBrut = sumBrut(oublieList);
             const encoursBrut = sumBrut(encoursList);
-            // Bilan général : cumul depuis le début, jusqu'au mois sélectionné inclus
-            const cumList = (filter === 'ALL') ? primes : primes.filter(p => p.date && p.date.slice(0, 7) <= filter);
             const cumBrut = sumBrut(cumList);
-            const selOpt = document.getElementById('monthFilter').selectedOptions[0];
-            const cumLabel = (filter === 'ALL') ? "Cumul de toute l'année" : "Cumul jusqu'à " + (selOpt ? selOpt.textContent : filter);
 
             // Rendu des cartes KPI
             const kpiContainer = document.getElementById('kpiCards');
@@ -736,7 +774,7 @@
 
                 <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-brand-200 border-l-4 border-l-brand-600 flex flex-col justify-between">
                     <div class="flex items-center justify-between text-brand-700 mb-1">
-                        <span class="text-xs font-bold uppercase tracking-wider">Bilan Général 2026</span>
+                        <span class="text-xs font-bold uppercase tracking-wider">${cumTitle}</span>
                         <span class="bg-brand-100 text-brand-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">${cumList.length}</span>
                     </div>
                     <div>
