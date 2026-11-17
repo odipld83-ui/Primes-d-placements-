@@ -149,6 +149,7 @@
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Date de retour *</label>
                             <input type="date" id="dateInput" required onchange="updateTarifNotice()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-2.5 font-semibold">
+                            <p id="weekNotice" class="mt-1 text-xs font-bold text-brand-600"></p>
                         </div>
 
                         <div>
@@ -335,11 +336,24 @@
             }
         }
 
+        // Numéro de semaine ISO (la semaine 1 contient le premier jeudi de l'année)
+        function getWeekNumber(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-').map(Number);
+            const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+            const day = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - day);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+        }
+
         function updateTarifNotice() {
             const date = document.getElementById('dateInput').value;
             const niveau = document.getElementById('niveauInput').value;
             const brut = calculateBrut(date, niveau);
             document.getElementById('tarifNoticeValue').textContent = `${brut},00 € brut`;
+            const wk = getWeekNumber(date);
+            document.getElementById('weekNotice').textContent = wk ? 'Semaine ' + wk : '';
         }
 
         /* ---------------- Cache local (mode hors-ligne) ---------------- */
@@ -820,7 +834,10 @@
 
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
-                        <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">${dFormatted}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
+                            ${dFormatted}
+                            <div class="text-xs font-bold text-brand-600">${p.date ? 'S' + getWeekNumber(p.date) : ''}</div>
+                        </td>
                         <td class="px-4 py-3">
                             <div class="font-bold text-slate-900">${p.systeme || '-'}</div>
                             <div class="text-xs text-slate-400">${p.projet || ''}</div>
