@@ -347,13 +347,22 @@
             return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
         }
 
+        // Nom du jour en français (long = "Mardi", court = "Mar.")
+        function getDayName(dateStr, style) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-').map(Number);
+            const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+            const name = d.toLocaleDateString('fr-FR', { weekday: style || 'long', timeZone: 'UTC' });
+            return name.charAt(0).toUpperCase() + name.slice(1);
+        }
+
         function updateTarifNotice() {
             const date = document.getElementById('dateInput').value;
             const niveau = document.getElementById('niveauInput').value;
             const brut = calculateBrut(date, niveau);
             document.getElementById('tarifNoticeValue').textContent = `${brut},00 € brut`;
             const wk = getWeekNumber(date);
-            document.getElementById('weekNotice').textContent = wk ? 'Semaine ' + wk : '';
+            document.getElementById('weekNotice').textContent = wk ? getDayName(date, 'long') + ' · Semaine ' + wk : '';
         }
 
         /* ---------------- Cache local (mode hors-ligne) ---------------- */
@@ -835,7 +844,7 @@
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
                         <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
-                            ${dFormatted}
+                            ${p.date ? getDayName(p.date, 'short') + ' ' : ''}${dFormatted}
                             <div class="text-xs font-bold text-brand-600">${p.date ? 'S' + getWeekNumber(p.date) : ''}</div>
                         </td>
                         <td class="px-4 py-3">
