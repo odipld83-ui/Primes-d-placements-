@@ -347,6 +347,16 @@
             return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
         }
 
+        // Clé de semaine = date du lundi de cette semaine (sert à repérer le changement de semaine)
+        function getWeekKey(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-').map(Number);
+            const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+            const day = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() - (day - 1));
+            return d.toISOString().slice(0, 10);
+        }
+
         // Nom du jour en français (long = "Mardi", court = "Mar.")
         function getDayName(dateStr, style) {
             if (!dateStr) return '';
@@ -825,7 +835,7 @@
             // Tri par date décroissante
             const sorted = [...list].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            tbody.innerHTML = sorted.map(p => {
+            tbody.innerHTML = sorted.map((p, idx) => {
                 let badgeStyle = '';
                 let badgeIcon = '';
                 if (p.statut === 'Payé') {
@@ -841,8 +851,12 @@
 
                 const dFormatted = p.date ? new Date(p.date).toLocaleDateString('fr-FR') : '-';
 
+                // Ligne de séparation en gras quand la semaine change
+                const newWeek = idx > 0 && getWeekKey(sorted[idx - 1].date) !== getWeekKey(p.date);
+                const weekStyle = newWeek ? ' style="border-top:3px solid #475569"' : '';
+
                 return `
-                    <tr class="hover:bg-slate-50/80 transition">
+                    <tr class="hover:bg-slate-50/80 transition"${weekStyle}>
                         <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
                             ${p.date ? getDayName(p.date, 'short') + ' ' : ''}${dFormatted}
                             <div class="text-xs font-bold text-brand-600">${p.date ? 'S' + getWeekNumber(p.date) : ''}</div>
